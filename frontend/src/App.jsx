@@ -16,7 +16,7 @@ export default function App() {
   
   //monaco values
   const[files,setFiles]=useState([
-    {id:'1',name:'main.js',content:'//Write your own code here\nconsole.log("hello world")',language:'javascript'}
+    {id:'1',name:'main',content:'//Write your own code here\nconsole.log("hello world")',language:'javascript'}
   ]);
   const[activeField,setActiveField]=useState('1');
   const activeFile=files.find(f=>f.id===activeField) ||files[0];
@@ -315,7 +315,8 @@ export default function App() {
         </label>
       </div>
 
-        <div style={{display:"flex", gap:"10px", alignItems:"center",flexWrap:'wrap' }}>
+        <div style={{display:"flex",gap:"10px",alignItems:"center",flexWrap:'wrap' }}>
+          {!joinedRoom?(
         <form onSubmit={joinRoom} style={{display:'flex',gap:'6px'}}>
           <input type="text" 
           placeholder="Enter Room ID"
@@ -323,22 +324,18 @@ export default function App() {
           onChange={(e)=>{setRoom(e.target.value)}}
           style={{padding:"5px 8px",borderRadius:"4px",border:"1px solid #555",background:'#1e1e1e',color:'#fff',fontSize:'13px',width:'90px'}} />
           <button type="submit" style={{padding:"5px 10px",cursor:"pointer",borderRadius:"10px",background:'#0d24a7',color:'#fff',fontSize:'13px',fontWeight:'bold'}}>Join Room</button>
-        </form>
-        {joinedRoom && (
-          <button onClick={leaveRoom} style={{padding:"5px 10px",cursor:"pointer",borderRadius:"10px",backgroundColor:"#ff4d4d", color:"#fff",border:"none",fontSize:'13px'}}>Leave Room</button>
+        </form>):(
+          <div style={{display:'flex',gap:'8px',alignItems:'center'}}>
+            <span style={{color:'green',fontWeight:'bold',display:'flex',gap:'8px',alignItems:'center'}}>
+              <span>(Active Room:{joinedRoom})</span>
+              <span style={{ backgroundColor:'#2e7d32',color:'#fff', padding:'2px 8px',borderRadius:'12px',fontSize:'12px'}}>{userCount} {userCount===1?'User':'Users'}</span> 
+            </span>
+            <button onClick={leaveRoom} style={{padding:"5px 10px",cursor:"pointer",borderRadius:"10px",backgroundColor:"#ff4d4d", color:"#fff",border:"none",fontSize:'13px'}}>Leave Room</button>
+          </div>
         )}
-        <span style={{fontSize:'15px'}}>
-          Status:<strong>{connected?'🟢 Connected':'🔴 Disconnected'}</strong>
-        </span>
-
-        {joinedRoom &&  connected && (
-          <span style={{color:'green',fontWeight:'bold',display:'flex',gap:'8px',alignItems:'center'}}>
-          <span >(Active Room:{joinedRoom})</span>
-          <span style={{ backgroundColor: '#2e7d32', color: '#fff', padding: '2px 8px', borderRadius: '12px', fontSize: '12px' }}>
-            {userCount} {userCount===1?'User':'Users'}
-          </span>
-          </span>
-        )}
+       <span style={{fontSize:'15px'}}>
+        Status:<strong>{connected?'🟢Connected':'🔴Disconnected'}</strong>
+       </span>
       </div>
       </div>
 
