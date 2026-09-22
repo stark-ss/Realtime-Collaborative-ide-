@@ -2,7 +2,7 @@
 
 A lightweight, web-based collaborative code editor built for seamless multi-user programming, featuring real-time synchronization, multi-file management, and an integrated code execution terminal.
 
-![Version](https://img.shields.io/badge/version-1.00.00-blue.svg)
+![Version](https://img.shields.io/badge/version-1.1.02-blue.svg)
 ![Status](https://img.shields.io/badge/status-active-success.svg)
 
 🔗 **[Live Demo](https://realtime-collaborative-7pedhba7l-soumya-fa3f.vercel.app/)**
