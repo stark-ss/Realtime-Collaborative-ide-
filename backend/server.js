@@ -2,14 +2,65 @@ const express=require("express");
 const{createServer}=require("http");
 const{Server}=require("socket.io");
 const cors=require("cors");
-const { error } = require("console");
-const { stderr, stdin } = require("process");
-const { version } = require("os");
-const { Script } = require("vm");
+const bcrypt=require('bcrypt');
 require('dotenv').config();
+
+const{Pool}=require('pg');
+
+const pool=new Pool(
+    process.env.DATABASE_URL?{
+     connectionString: process.env.DATABASE_URL,
+      ssl:{rejectUnauthorized:false },
+    }:{
+    user:process.env.DB_USER,
+    host:process.env.DB_HOST,
+    database:process.env.DB_NAME,
+    password:process.env.DB_PASSWORD,
+    port:process.env.DB_PORT,
+});
 
 const app=express();
 app.use(cors());
+app.use(express.json());
+
+app.post(`/api/join-room`,async(req,res)=>{
+    const{email,name,roomName,pass}=req.body;
+    if(!email||!name||!roomName||!pass){
+        return res.status(400).json({success:false,message:'all fields are required'}); 
+    }    
+
+    try{
+        await pool.query(`insert into users(email,name) values ($1,$2) on conflict (email) do update set name=excluded.name`,[email,name]);
+
+        const result=await pool.query(`select * from rooms where room_name=$1`,[roomName]);
+
+        if (result.rows.length>0){
+            const currentRoom=result.rows[0];
+            const match=await bcrypt.compare(pass,currentRoom.password);
+            if(!match){
+                return res.status(401).json({success:false,message:'Incorrect room password'});
+            }
+
+        } else{
+            const hashPass=await bcrypt.hash(pass,5);
+            await pool.query(`insert into rooms (room_name,password) values($1,$2)`,[roomName,hashPass]);
+        }
+        return res.json({success:true,message:'Authenticated successfully'});
+    }catch(e){
+        console.error('Database error',e);
+        return res.status(500).json({success:false,message:'server error during authentication'});
+    }
+});
+
+app.get(`/api/check-room/:roomName`,async(req,res)=>{
+    try{
+        const{roomName}=req.params;
+        const result=await pool.query(`select 1 from rooms where room_name=$1`,[roomName]);
+        return res.json({exists:result.rows.length>0});
+    }catch(e){
+       return res.status(500).json({exists:false});
+    }
+});
 
 const httpServer=createServer(app);
 
@@ -21,12 +72,14 @@ const io=new Server(httpServer,{
 });
 
 io.on("connection",(socket)=>{
-    socket.on("join_room",(roomID)=>{
+    socket.on("join_room",({roomID,userName})=>{
         Array.from(socket.rooms).forEach((r)=>{
            if(r!==socket.id) socket.leave(r);
         });
         socket.join(roomID);
         socket.currentRoom=roomID;
+        socket.userName=userName || 'Anonymous';
+
         const clients=io.sockets.adapter.rooms.get(roomID);
         if(clients && clients.size>1){
             const existingClient=Array.from(clients).find((id)=>id!==socket.id);
@@ -41,7 +94,7 @@ io.on("connection",(socket)=>{
         }
         io.to(roomID).emit("room_user_count",{count:clients?clients.size:0});
         socket.to(roomID).emit("notification",{
-            message:`User ${socket.id.substring(0,5)} entered the room`,
+            message:` ${socket.userName} entered the room`,
             timestamp:new Date().toLocaleTimeString()
         });
     });
@@ -61,15 +114,24 @@ io.on("connection",(socket)=>{
         io.to(targetSocketId).emit("receive_all_files",{files});
     });
 
-    socket.on("leave_room",(roomId)=>{
+    socket.on("leave_room",async (roomId)=>{
         socket.leave(roomId);
         socket.to(roomId).emit("notification",{
-            message:`User ${socket.id.substring(0,5)} left the room`,
+            message:`${socket.userName} left the room`,
             timestamp:new Date().toLocaleTimeString()
         });
         socket.currentRoom=null;
         const clients=io.sockets.adapter.rooms.get(roomId);
-        io.to(roomId).emit("room_user_count",{count:clients?clients.size:0});
+        const count=clients?clients.size:0;
+        io.to(roomId).emit("room_user_count",{count});
+
+        if(count===0){
+            try{
+                await pool.query(`delete from rooms where room_name=$1`,[roomId]);
+            }catch(e){
+                console.error('error deleting empty room',e);
+            }
+        }
     });
     socket.on("type_code",({roomID,text,fileId})=>{
         socket.to(roomID).emit("receive_code",{
@@ -91,15 +153,24 @@ io.on("connection",(socket)=>{
         socket.to(roomID).emit("receive_delete_file",{fileId});
     });
 
-    socket.on("disconnect",()=>{
+    socket.on("disconnect",async ()=>{
         if(socket.currentRoom){
             const roomID=socket.currentRoom;
         socket.to(socket.currentRoom).emit("notification",{
-            message:`User ${socket.id.substring(0,5)} left the room`,
+            message:`${socket.userName} left the room`,
             timestamp:new Date().toLocaleTimeString()
         });
         const clients=io.sockets.adapter.rooms.get(roomID);
-        io.to(roomID).emit("room_user_count",{count:clients?Math.max(0,clients.size-1):0});
+        const count=clients? clients.size:0;
+        io.to(roomID).emit("room_user_count",{count});
+
+        if(count===0){
+            try{
+                await pool.query(`delete from rooms where room_name=$1`,[roomID]);
+            }catch(e){
+                console.error('error deleting empty room',e);
+            }
+        }
     }
     });
     
