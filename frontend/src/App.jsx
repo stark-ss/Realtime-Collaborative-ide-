@@ -1,3 +1,4 @@
+import Login from "./login";
 import {useEffect,useRef,useState} from "react";
 import{io} from "socket.io-client";
 import Editor, { useMonaco } from "@monaco-editor/react";
@@ -150,13 +151,6 @@ export default function App() {
 
     };
   },[]);
-
-  const joinRoom=(e)=>{
-    e.preventDefault();
-    if(!room.trim()) return;
-    socket.emit("join_room",room);
-    setJoinedRoom(room);
-  };
   
   const leaveRoom=()=>{
     if(joinedRoom){
@@ -269,6 +263,18 @@ export default function App() {
       logContainer.current.scrollTop=logContainer.current.scrollHeight;
   },[logs]);
 
+  const handleRoomJoined=(roomName)=>{
+    setJoinedRoom(roomName);
+    const userName=localStorage.getItem('userName')||'User';
+    socket.emit('join_room',{roomID:roomName,userName});
+  }
+
+  if(!joinedRoom){
+    return <Login onRoomJoined={handleRoomJoined} socket={socket} connected={connected}/>;
+  }
+
+  const userName=localStorage.getItem('userName') || 'user';
+
   return (
     <div style={{ userSelect:'none', padding:'10px',fontFamily:'sans-serif',width:'100%',boxSizing:'border-box'}}>
       
@@ -316,23 +322,16 @@ export default function App() {
       </div>
 
         <div style={{display:"flex",gap:"10px",alignItems:"center",flexWrap:'wrap' }}>
-          {!joinedRoom?(
-        <form onSubmit={joinRoom} style={{display:'flex',gap:'6px'}}>
-          <input type="text" 
-          placeholder="Enter Room ID"
-          value={room}
-          onChange={(e)=>{setRoom(e.target.value)}}
-          style={{padding:"5px 8px",borderRadius:"4px",border:"1px solid #555",background:'#1e1e1e',color:'#fff',fontSize:'13px',width:'90px'}} />
-          <button type="submit" style={{padding:"5px 10px",cursor:"pointer",borderRadius:"10px",background:'#0d24a7',color:'#fff',fontSize:'13px',fontWeight:'bold'}}>Join Room</button>
-        </form>):(
-          <div style={{display:'flex',gap:'8px',alignItems:'center'}}>
-            <span style={{color:'green',fontWeight:'bold',display:'flex',gap:'8px',alignItems:'center'}}>
-              <span>(Active Room:{joinedRoom})</span>
-              <span style={{ backgroundColor:'#2e7d32',color:'#fff', padding:'2px 8px',borderRadius:'12px',fontSize:'12px'}}>{userCount} {userCount===1?'User':'Users'}</span> 
+           <div style={{display:'flex',gap:'8px',alignItems:'center'}}>
+            <span style={{color:'#4caf50',fontWeight:'bold',display:'flex',gap:'8px',alignItems:'center',fontSize:'13px'}}>
+              <span>👤 {userName}</span>
+              <span>(Room:{joinedRoom})</span>
+              <span style={{backgroundColor:'#2e7d32',color:'#fff', padding:'2px 8px',borderRadius:'12px',fontSize:'12px'}}>
+                {userCount} {userCount===1?'User':'Users'}
+              </span>
             </span>
-            <button onClick={leaveRoom} style={{padding:"5px 10px",cursor:"pointer",borderRadius:"10px",backgroundColor:"#ff4d4d", color:"#fff",border:"none",fontSize:'13px'}}>Leave Room</button>
-          </div>
-        )}
+            <button onClick={leaveRoom} style={{padding:"5px 10px", cursor:"pointer",borderRadius:"10px",backgroundColor:"#ff4d4d", color:"#fff",border:"none",fontSize:'13px'}}>Leave Room</button>
+           </div>
        <span style={{fontSize:'15px'}}>
         Status:<strong>{connected?'🟢Connected':'🔴Disconnected'}</strong>
        </span>
