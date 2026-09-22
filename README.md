@@ -5,7 +5,7 @@ A lightweight, web-based collaborative code editor built for seamless multi-user
 ![Version](https://img.shields.io/badge/version-1.00.00-blue.svg)
 ![Status](https://img.shields.io/badge/status-active-success.svg)
 
-🔗 **[Live Demo](https://realtime-collaborative-ide-weld.vercel.app/)**
+🔗 **[Live Demo](https://realtime-collaborative-7pedhba7l-soumya-fa3f.vercel.app/)**
 
 ---
 
