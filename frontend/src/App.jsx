@@ -198,7 +198,7 @@ export default function App() {
         fileId:activeField,
         text:updatedCode
       });
-    },300);
+    },150);
   }
   };
 
