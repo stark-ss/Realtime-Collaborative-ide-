@@ -35,6 +35,7 @@ export default function App() {
   const editorRef=useRef(null);
   const isRemoteUpdate=useRef(false);
   const logContainer=useRef(null);
+  const latency=useRef(null);
 
   //backend functions
   const codeRef=useRef(code);
@@ -84,6 +85,9 @@ export default function App() {
         if(model.getValue()!==data.text){
         isRemoteUpdate.current=true;
 
+        const currentPos=editor.getPosition();
+        const currentSel=editor.getSelection();
+
         const fullRange=model.getFullModelRange();
         model.pushEditOperations(
           [],
@@ -95,6 +99,11 @@ export default function App() {
           ],
           ()=>null
         );
+
+        if(currentPos)
+          editor.setPosition(currentPos);
+        if(currentSel)
+          editor.setSelection(currentSel);
         
         isRemoteUpdate.current=false;
         }
@@ -179,12 +188,18 @@ export default function App() {
     setFiles(prevFiles=>prevFiles.map(file=>file.id===activeField?{...file,content:updatedCode}:file));
   
     if(joinedRoom){
+
+      if(latency.current){
+        clearTimeout(latency.current);
+      }
+      latency.current=setTimeout(()=>{
       socket.emit("type_code",{
         roomID:joinedRoom,
         fileId:activeField,
         text:updatedCode
       });
-    }
+    },300);
+  }
   };
 
   const handleEditorMount=(editor)=>{
